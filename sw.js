@@ -1,4 +1,4 @@
-const CACHE = "trener-ai-v5";
+const CACHE = "trener-ai-v6";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-512.png", "./zadachi.js"];
 
 self.addEventListener("install", e => {
