@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Тренажёр ИИ-олимпиады</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16253C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Тренажёр ИИ">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16253C;
+    --paper:#E7EDF4;
+    --card:#FFFFFF;
+    --rule:#CBD8E6;
+    --accent:#2F4FD8;
+    --ok:#0E7A52;
+    --no:#BE3B26;
+    --muted:#5F718A;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:17px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{
+    max-width:860px;margin:0 auto;
+    padding:0 max(18px, env(safe-area-inset-left)) calc(72px + env(safe-area-inset-bottom));
+  }
+
+  /* --- шапка: тетрадь в клетку --- */
+  header{
+    background:
+      repeating-linear-gradient(to right, transparent 0 39px, var(--rule) 39px 40px),
+      repeating-linear-gradient(to bottom, transparent 0 39px, var(--rule) 39px 40px),
+      #F7FAFD;
+    border-bottom:2px solid var(--ink);
+    margin-bottom:26px;
+  }
+  .hd{max-width:860px;margin:0 auto;padding:34px 18px 26px}
+  .hd h1{
+    font-size:clamp(26px,5.2vw,40px);
+    font-weight:600;
+    letter-spacing:-.02em;
+    margin:0 0 6px;
+    line-height:1.12;
+  }
+  .hd p{margin:0;max-width:56ch;color:var(--muted);font-size:15px}
+  .score{
+    display:inline-flex;align-items:baseline;gap:8px;
+    margin-top:18px;padding:7px 14px;background:var(--ink);color:#fff;border-radius:999px;
+    font-size:14px;
+  }
+  .score b{font-size:19px;font-weight:600}
+
+  /* --- навигация по типам --- */
+  nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+  nav button{
+    font:inherit;font-size:15px;
+    background:var(--card);color:var(--ink);
+    border:1px solid var(--rule);border-radius:var(--radius);
+    padding:11px 16px;min-height:44px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  nav button:hover{border-color:var(--accent)}
+  nav button[aria-selected="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  nav button:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .topic-lead{
+    border-left:3px solid var(--accent);
+    padding:2px 0 2px 14px;margin:0 0 22px;
+    color:var(--muted);font-size:15px;max-width:60ch;
+  }
+  .topic-lead b{color:var(--ink);font-weight:500}
+
+  /* --- карточка задачи --- */
+  .task{
+    background:var(--card);
+    border:1px solid var(--rule);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    margin-bottom:14px;
+  }
+  .task.solved{border-color:var(--ok);border-left:4px solid var(--ok);padding-left:17px}
+  .tnum{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .q{font-family:"PT Serif",Georgia,serif;font-size:17px;line-height:1.55;margin:0 0 14px}
+  .q ul{margin:8px 0 0;padding-left:22px}
+  .q li{margin-bottom:3px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  input[type=text]{
+    font:inherit;font-size:17px;padding:11px 14px;width:200px;min-height:44px;
+    border:1px solid var(--rule);border-radius:8px;background:#FBFCFE;color:var(--ink);
+  }
+  .btn{
+    font:inherit;font-size:15px;cursor:pointer;min-height:44px;
+    border-radius:8px;padding:11px 18px;border:1px solid transparent;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-main{background:var(--accent);color:#fff}
+  .btn-main:hover{background:#2440B4}
+  .btn-ghost{background:transparent;color:var(--muted);border-color:var(--rule)}
+  .btn-ghost:hover{color:var(--ink);border-color:var(--ink)}
+  .verdict{margin-top:12px;font-size:15px;font-weight:500}
+  .verdict.ok{color:var(--ok)}
+  .verdict.no{color:var(--no)}
+  .panel{
+    margin-top:12px;padding:12px 14px;
+    background:#F2F6FB;border-radius:8px;
+    font-size:15px;line-height:1.55;
+  }
+  .panel.sol{background:#EEF7F2;border-left:3px solid var(--ok)}
+  .hidden{display:none}
+
+  /* --- разбор варианта --- */
+  .key{background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px}
+  .key h3{margin:0 0 6px;font-size:16px;font-weight:600}
+  .key .a{display:inline-block;background:var(--ink);color:#fff;border-radius:6px;padding:2px 10px;font-size:15px;margin-bottom:8px}
+  .key p{margin:0;font-size:15px;color:#2B3B54;line-height:1.55}
+  .note{font-size:14px;color:var(--muted);margin-top:8px}
+
+  .sect{
+    background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
+    padding:18px 20px;margin-bottom:14px;
+  }
+  .sect h3{margin:0 0 4px;font-size:17px;font-weight:600}
+  .sect p{margin:10px 0 0;font-family:"PT Serif",Georgia,serif;font-size:17px;line-height:1.6}
+  .sect ul{margin:10px 0 0;padding-left:22px;font-family:"PT Serif",Georgia,serif;font-size:17px;line-height:1.6}
+  .sect li{margin-bottom:4px}
+  .sect .formula{
+    display:block;margin:10px 0 0;padding:10px 14px;background:#F2F6FB;border-radius:8px;
+    font-family:"Rubik",sans-serif;font-size:16px;
+  }
+  .tag{
+    display:inline-block;font-size:13px;border-radius:999px;padding:3px 11px;
+    vertical-align:middle;margin-left:2px;
+  }
+  .tag.learn{background:var(--accent);color:#fff}
+  .tag.get{background:transparent;color:var(--muted);border:1px solid var(--rule)}
+  .plan{background:var(--ink);color:#fff;border-radius:var(--radius);padding:18px 20px;margin-bottom:14px}
+  .plan h3{margin:0 0 8px;font-size:17px;font-weight:600}
+  .plan ol{margin:0;padding-left:20px;font-size:16px;line-height:1.6}
+  .plan li{margin-bottom:5px}
+  .plan-note{margin:0 0 10px;font-size:15px;line-height:1.55;color:#C9D6E8}
+  .plan ol + .plan-note{margin:12px 0 0}
+
+  .fig{display:block;width:100%;height:auto;max-width:620px;margin:14px 0 4px}
+  .fig text{font-family:"Rubik",system-ui,sans-serif;fill:var(--ink)}
+  .fig .h{font-size:14px;font-weight:500}
+  .fig .b{font-size:15px;font-weight:500}
+  .fig .s{font-size:13px;fill:var(--muted)}
+  .fig .v{font-size:13px;fill:var(--ok);text-anchor:end}
+  .fig .x{font-size:13px;fill:var(--no);text-anchor:end}
+  .fig .ok-box{fill:#E4F2EB;stroke:var(--ok);stroke-width:1.5}
+  .fig .no-box{fill:#FBEBE7;stroke:var(--no);stroke-width:1.5}
+  .fig .pale-box{fill:#F2F6FB;stroke:var(--rule);stroke-width:1.5}
+  .fig .frame{fill:none;stroke:var(--rule);stroke-width:1.5}
+  .fig .dot-yes{fill:var(--accent)}
+  .fig .dot-no{fill:#fff;stroke:var(--muted);stroke-width:2}
+  .fig .bar-base{fill:#AFC0D6}
+  .fig .bar-extra{fill:var(--accent)}
+  .fig .axis{stroke:var(--rule);stroke-width:1.5}
+  .fig .brace{stroke:var(--accent);stroke-width:2}
+  .fig .ring{fill:none;stroke:var(--ink);stroke-width:2.5}
+  .fig .roof-green{fill:#2F9E6B}
+  .fig .roof-yellow{fill:#E3B341}
+  .fig .roof-blue{fill:#4A7BE8}
+  .fig .circle-a{fill:rgba(47,79,216,.14);stroke:var(--accent);stroke-width:1.5}
+  .fig .circle-b{fill:rgba(14,122,82,.14);stroke:var(--ok);stroke-width:1.5}
+
+  footer{margin-top:34px;font-size:14px;color:var(--muted);max-width:62ch}
+  @media (max-width:520px){
+    input[type=text]{width:100%}
+    .row .btn{flex:1 1 auto}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .panel{animation:fade .18s ease-out}
+    @keyframes fade{from{opacity:0;transform:translateY(-3px)}to{opacity:1}}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd">
+    <h1>Тренажёр ВсОШ,<br>профиль «Искусственный интеллект»</h1>
+    <p>Начните с памятки: в ней собрано всё нужное для школьного и пригласительного этапов, с пометками, что выучить, а что просто понять. Дальше — двенадцать типов задач с подсказками и разборами, а в конце два разбора вариантов целиком.</p>
+    <div class="row" style="margin-top:18px">
+      <div class="score" style="margin-top:0">Решено: <b id="score">0</b> из <span id="total">0</span></div>
+      <button class="btn btn-ghost" id="reset">Начать заново</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav id="nav" role="tablist"></nav>
+  <div id="content"></div>
+
+  <footer>
+    Написанные ответы и отметки о решённых задачах сохраняются на планшете: можно уйти в памятку или в другой раздел и вернуться — всё останется на месте. Открытая вкладка тоже запоминается. Кнопка «Начать заново» стирает и ответы, и прогресс.
+  </footer>
+</div>
+
+<script src="zadachi.js" onerror="void 0"></script>
+<script>
+const FIGS = {
+
+matrix: `<svg class="fig" viewBox="0 0 640 290" role="img" aria-label="Четыре кучки ответов модели">
+  <text x="260" y="34" text-anchor="middle" class="h">Модель сказала «да»</text>
+  <text x="500" y="34" text-anchor="middle" class="h">Модель сказала «нет»</text>
+  <text x="132" y="112" text-anchor="end" class="h">Кошка есть</text>
+  <text x="132" y="210" text-anchor="end" class="h">Кошки нет</text>
+
+  <rect x="140" y="54" width="240" height="98" rx="8" class="ok-box"/>
+  <text x="260" y="100" text-anchor="middle" class="b">верно нашла</text>
+  <text x="260" y="124" text-anchor="middle" class="s">это и есть «найденные кошки»</text>
+
+  <rect x="390" y="54" width="240" height="98" rx="8" class="no-box"/>
+  <text x="510" y="100" text-anchor="middle" class="b">пропустила</text>
+  <text x="510" y="124" text-anchor="middle" class="s">ошибка</text>
+
+  <rect x="140" y="162" width="240" height="98" rx="8" class="no-box"/>
+  <text x="260" y="208" text-anchor="middle" class="b">ложная тревога</text>
+  <text x="260" y="232" text-anchor="middle" class="s">ошибка</text>
+
+  <rect x="390" y="162" width="240" height="98" rx="8" class="ok-box"/>
+  <text x="510" y="208" text-anchor="middle" class="b">верно отвергла</text>
+  <text x="510" y="232" text-anchor="middle" class="s">тоже верный ответ</text>
+
+  <text x="0" y="282" class="s">Зелёные клетки — accuracy. Верхняя строка — recall. Левый столбец — precision.</text>
+</svg>`,
+
+vote: `<svg class="fig" viewBox="0 0 640 215" role="img" aria-label="Четыре расклада голосования трёх моделей">
+  ${[["3:0","да",3,90],["2:1","да",2,240],["1:2","нет",1,390],["0:3","нет",0,540]].map(([lab,res,yes,cx])=>`
+    <text x="${cx}" y="30" text-anchor="middle" class="h">${lab}</text>
+    ${[0,1,2].map(i=>`<circle cx="${cx-34+i*34}" cy="74" r="15" class="${i<yes?"dot-yes":"dot-no"}"/>`).join("")}
+    <rect x="${cx-56}" y="110" width="112" height="34" rx="8" class="${res==="да"?"ok-box":"pale-box"}"/>
+    <text x="${cx}" y="132" text-anchor="middle" class="b">Ai-0: ${res}</text>
+  `).join("")}
+  <text x="240" y="166" text-anchor="middle" class="s">здесь ровно одна модель против</text>
+  <circle cx="14" cy="196" r="9" class="dot-yes"/><text x="30" y="201" class="s">модель ответила «да»</text>
+  <circle cx="234" cy="196" r="9" class="dot-no"/><text x="250" y="201" class="s">модель ответила «нет»</text>
+</svg>`,
+
+assume: `<svg class="fig" viewBox="0 0 640 245" role="img" aria-label="Метод предположения на столбиках">
+  <text x="0" y="20" class="h">Шаг 1. Все 30 дней по 3 запроса — это 90.</text>
+  <text x="0" y="42" class="h">Шаг 2. Не хватает 126 − 90 = 36.</text>
+  <text x="0" y="64" class="h">Шаг 3. Каждый день «по 5» добавляет 2 запроса: 36 ÷ 2 = 18 дней.</text>
+  ${Array.from({length:30},(_,i)=>`
+    <rect x="${40+i*19}" y="160" width="13" height="54" rx="2" class="bar-base"/>
+    ${i<18?`<rect x="${40+i*19}" y="124" width="13" height="32" rx="2" class="bar-extra"/>`:""}
+  `).join("")}
+  <line x1="34" y1="218" x2="616" y2="218" class="axis"/>
+  <text x="140" y="112" class="s">18 дней по 5 запросов</text>
+  <text x="430" y="112" class="s">12 дней по 3 запроса</text>
+  <text x="0" y="238" class="s">Ответ — число «маленьких» дней: 30 − 18 = 12.</text>
+</svg>`,
+
+rule: `<svg class="fig" viewBox="0 0 640 250" role="img" aria-label="Сравнение ответа правила и настоящего рода слова">
+  <text x="10" y="24" class="h">слово</text>
+  <text x="230" y="24" class="h">правило: на конце -а или -я?</text>
+  <text x="470" y="24" class="h">на самом деле</text>
+  <line x1="0" y1="36" x2="640" y2="36" class="axis"/>
+  ${[["мама","да → женский","женский род","ok"],["папа","да → женский","мужской род","err"],["знамя","да → женский","средний род","err"],["речь","нет → не женский","женский род","err"],["куст","нет → не женский","мужской род","ok"]]
+    .map(([w,r,t,v],i)=>`
+    <rect x="0" y="${44+i*40}" width="640" height="36" rx="6" class="${v==="err"?"no-box":"pale-box"}"/>
+    <text x="10" y="${68+i*40}" class="b">${w}</text>
+    <text x="230" y="${68+i*40}" class="s">${r}</text>
+    <text x="470" y="${68+i*40}" class="s">${t}</text>
+    <text x="612" y="${68+i*40}" class="${v==="err"?"x":"v"}">${v==="err"?"ошибка":"верно"}</text>
+  `).join("")}
+</svg>`,
+
+period: `<svg class="fig" viewBox="0 0 640 252" role="img" aria-label="Три варианта раскраски домов с периодом три">
+  <text x="0" y="18" class="h">Узор повторяется через каждые три дома.</text>
+  <text x="0" y="38" class="h">Зелёный может стоять первым, вторым или третьим — отсюда три варианта.</text>
+  ${[0,1,2].map(r=>`
+    <text x="0" y="${76+r*58}" class="s">вариант ${r+1}</text>
+    ${Array.from({length:21},(_,i)=>{
+      const color = (i-r+3)%3===0 ? "roof-green" : ((i-r+3)%3===1 ? "roof-yellow" : "roof-blue");
+      const seventh = i===r+18;
+      return `<rect x="${72+i*26}" y="${54+r*58}" width="22" height="22" rx="3" class="${color}"/>` +
+             (seventh?`<rect x="${70+i*26}" y="${52+r*58}" width="26" height="26" rx="5" class="ring"/><text x="${83+i*26}" y="${92+r*58}" text-anchor="middle" class="b">${i+1}</text>`:"");
+    }).join("")}
+  `).join("")}
+  <text x="0" y="244" class="s">Седьмой зелёный дом — 19-й, 20-й или 21-й. Все три числа идут в ответ.</text>
+</svg>`,
+
+sums: `<svg class="fig" viewBox="0 0 640 212" role="img" aria-label="Три числа на прямой и их попарные суммы">
+  <line x1="40" y1="120" x2="600" y2="120" class="axis"/>
+  ${[["a",150,"49"],["b",320,"51"],["c",490,"53"]].map(([n,x,v])=>`
+    <circle cx="${x}" cy="120" r="7" class="dot-yes"/>
+    <text x="${x}" y="148" text-anchor="middle" class="b">${n}</text>
+    <text x="${x}" y="168" text-anchor="middle" class="s">${v}</text>
+  `).join("")}
+  <line x1="150" y1="86" x2="320" y2="86" class="brace"/>
+  <text x="235" y="76" text-anchor="middle" class="s">a + b = 100 — наименьшая сумма</text>
+  <line x1="320" y1="52" x2="490" y2="52" class="brace"/>
+  <text x="405" y="42" text-anchor="middle" class="s">b + c = 104 — наибольшая сумма</text>
+  <line x1="150" y1="182" x2="490" y2="182" class="brace"/>
+  <text x="320" y="202" text-anchor="middle" class="s">разница сумм = c − a = 4</text>
+</svg>`,
+
+venn: `<svg class="fig" viewBox="0 0 640 252" role="img" aria-label="Две пересекающиеся группы кружков">
+  <rect x="4" y="4" width="632" height="200" rx="10" class="frame"/>
+  <circle cx="265" cy="112" r="86" class="circle-a"/>
+  <circle cx="375" cy="112" r="86" class="circle-b"/>
+  <text x="170" y="32" text-anchor="middle" class="h">робототехника — 18</text>
+  <text x="480" y="32" text-anchor="middle" class="h">шахматы — 15</text>
+  <text x="212" y="118" text-anchor="middle" class="b">10</text>
+  <text x="320" y="118" text-anchor="middle" class="b">8</text>
+  <text x="428" y="118" text-anchor="middle" class="b">7</text>
+  <text x="20" y="190" class="s">вне кружков: 5</text>
+  <text x="0" y="226" class="s">10 — только робототехника, 8 — оба кружка, 7 — только шахматы.</text>
+  <text x="0" y="246" class="s">18 + 15 = 33, а в кружках 25 человек — лишние 8 посчитаны дважды.</text>
+</svg>`
+,
+
+tree: `<svg class="fig" viewBox="0 0 640 370" role="img" aria-label="Дерево решений и таблица истинности">
+  <polygon points="150,62 250,26 350,62 250,98" class="pale-box"/>
+  <text x="250" y="68" text-anchor="middle" class="b">Есть пропуск?</text>
+  <path d="M150 62 H70 V150" fill="none" stroke="#CBD8E6" stroke-width="1.5"/>
+  <path d="M350 62 H440 V116" fill="none" stroke="#CBD8E6" stroke-width="1.5"/>
+  <text x="108" y="52" text-anchor="middle" class="s">нет</text>
+  <text x="396" y="52" text-anchor="middle" class="s">да</text>
+  <rect x="30" y="150" width="80" height="40" rx="6" class="ok-box"/>
+  <text x="70" y="176" text-anchor="middle" class="b">Да</text>
+  <polygon points="330,152 440,116 550,152 440,188" class="pale-box"/>
+  <text x="440" y="158" text-anchor="middle" class="b">Пришёл с учителем?</text>
+  <path d="M330 152 H250 V240" fill="none" stroke="#CBD8E6" stroke-width="1.5"/>
+  <path d="M550 152 H600 V240" fill="none" stroke="#CBD8E6" stroke-width="1.5"/>
+  <text x="288" y="142" text-anchor="middle" class="s">нет</text>
+  <text x="578" y="142" text-anchor="middle" class="s">да</text>
+  <rect x="210" y="240" width="80" height="40" rx="6" class="ok-box"/>
+  <text x="250" y="266" text-anchor="middle" class="b">Да</text>
+  <rect x="560" y="240" width="80" height="40" rx="6" class="no-box"/>
+  <text x="600" y="266" text-anchor="middle" class="b">Нет</text>
+  <line x1="0" y1="304" x2="640" y2="304" class="axis"/>
+  <text x="0" y="326" class="h">пропуск / с учителем → впускаем</text>
+  <text x="0" y="350" class="s">нет, нет → да &#160;&#160;·&#160;&#160; нет, да → да &#160;&#160;·&#160;&#160; да, нет → да &#160;&#160;·&#160;&#160; да, да → нет</text>
+</svg>`,
+
+interval: `<svg class="fig" viewBox="0 0 640 230" role="img" aria-label="Отрезок возможных ответов и предсказание посередине">
+  <text x="0" y="22" class="h">Модель видела только часть строки, поэтому верный ответ — где-то на отрезке:</text>
+  <line x1="60" y1="96" x2="580" y2="96" class="axis" stroke-width="2.5"/>
+  <line x1="60" y1="80" x2="60" y2="112" class="axis" stroke-width="2.5"/>
+  <line x1="320" y1="76" x2="320" y2="116" class="brace"/>
+  <line x1="580" y1="80" x2="580" y2="112" class="axis" stroke-width="2.5"/>
+  <text x="60" y="70" text-anchor="middle" class="b">m</text>
+  <text x="320" y="66" text-anchor="middle" class="b">m + 15</text>
+  <text x="580" y="70" text-anchor="middle" class="b">m + 30</text>
+  <path d="M316 136 H64" fill="none" class="brace"/>
+  <path d="M324 136 H576" fill="none" class="brace"/>
+  <text x="190" y="158" text-anchor="middle" class="s">промах не больше 15</text>
+  <text x="450" y="158" text-anchor="middle" class="s">промах не больше 15</text>
+  <text x="0" y="190" class="s">Назовёшь край — в худшем случае промахнёшься на все 30.</text>
+  <text x="0" y="212" class="s">Назовёшь середину — самое большее на 15. Это и есть ответ.</text>
+</svg>`,
+
+grid: `<svg class="fig" viewBox="0 0 640 348" role="img" aria-label="Четыре клетки в углу доски">
+  <text x="0" y="22" class="h">Останавливаемся в углу: у угловой клетки всего два соседа по стороне.</text>
+  ${Array.from({length:8},(_,r)=>Array.from({length:8},(_,c)=>`<rect x="${30+c*30}" y="${44+r*30}" width="30" height="30" class="frame"/>`).join("")).join("")}
+  <rect x="30" y="44" width="30" height="30" class="ok-box"/>
+  <rect x="60" y="44" width="30" height="30" class="ok-box"/>
+  <rect x="60" y="74" width="30" height="30" class="ok-box"/>
+  <rect x="30" y="74" width="30" height="30" class="ok-box"/>
+  <text x="75" y="64" text-anchor="middle" class="b">1</text>
+  <text x="75" y="94" text-anchor="middle" class="b">2</text>
+  <text x="45" y="94" text-anchor="middle" class="b">3</text>
+  <text x="45" y="64" text-anchor="middle" class="b">4</text>
+  <text x="300" y="70" class="s">Шаг 1 — соседняя с началом клетка.</text>
+  <text x="300" y="94" class="s">Шаги 2 и 3 — идём по стороне вниз и влево.</text>
+  <text x="300" y="118" class="s">Шаг 4 — угол. Оба его соседа</text>
+  <text x="300" y="138" class="s">уже закрашены, значит всё останавливается.</text>
+  <text x="0" y="316" class="s">Меньше четырёх не выйдет: у последней клетки все соседи должны быть уже закрашены,</text>
+  <text x="0" y="338" class="s">а два соседа угла между собой не соседствуют — подряд их не пройти.</text>
+</svg>`
+
+};
+
+const TOPICS = [
+  {
+    id:"p",
+    tab:"Памятка",
+    intro:`
+    <div class="plan">
+      <h3>Что учить к школьному этапу</h3>
+      <p class="plan-note">Семь заданий по 12 баллов, всего 84. Решение сдавать не нужно — только числовой ответ, поэтому цена ошибки в арифметике такая же, как цена незнания темы.</p>
+      <ol>
+        <li>«Дерево решений» — 15 минут. Самые лёгкие 12 баллов, и там четыре клетки по 3 балла: даже частично заполненная таблица приносит баллы.</li>
+        <li>«Предсказание с наименьшей ошибкой» — 25 минут. Единственная по-настоящему «ИИ»-идея, в школе её не проходят.</li>
+        <li>«Проверка по ходу» и «Границы и диапазоны» — по 20 минут. Обе про одно: взять крайний случай и проверить, что он возможен.</li>
+        <li>«Два вида по столько-то» — 15 минут: задача про папки и файлы решается этим приёмом.</li>
+        <li>«Обход клеток» — 10 минут: достаточно запомнить рассуждение про угол.</li>
+        <li>«Блоки одинаковых цифр» — если останется время. Это самое трудное задание варианта.</li>
+      </ol>
+      <p class="plan-note">К пригласительному этапу порядок другой: сначала «Качество модели» (три формулы), потом «Правило и его ошибки», «Два вида по столько-то» и «Повторяющийся узор».</p>
+    </div>
+
+    <div class="sect">
+      <h3>Что такое «модель ИИ» в этих задачах <span class="tag get">понять</span></h3>
+      <p>Модель — это программа, которая получает вопрос или картинку и выдаёт ответ. В олимпиадных задачах она работает по простому правилу, и её ответ может быть неверным. Никаких знаний про нейросети не нужно: нужно аккуратно посчитать за модель и сравнить её ответ с тем, как на самом деле.</p>
+      <p>Главная мысль всего варианта: <b>модель ошибается, и ошибку можно посчитать.</b></p>
+    </div>
+
+    <div class="sect">
+      <h3>Четыре кучки ответов <span class="tag learn">выучить</span></h3>
+      <p>Когда модель отвечает «да» или «нет» (есть кошка / нет кошки), все картинки делятся ровно на четыре кучки:</p>
+      <ul>
+        <li>сказала «да», и кошка есть — <b>верно нашла</b>;</li>
+        <li>сказала «да», а кошки нет — <b>ложная тревога</b>;</li>
+        <li>сказала «нет», а кошка есть — <b>пропустила</b>;</li>
+        <li>сказала «нет», и кошки нет — <b>верно отвергла</b>.</li>
+      </ul>
+      <p>Верные ответы — это первая и четвёртая кучки. Ошибки — вторая и третья. Прежде чем считать что-либо, разложи задачу на эти четыре числа.</p>
+      ${FIGS.matrix}
+    </div>
+
+    <div class="sect">
+      <h3>Три формулы качества <span class="tag learn">выучить наизусть</span></h3>
+      <span class="formula">accuracy (доля правильных ответов) = все верные ответы ÷ все картинки</span>
+      <span class="formula">recall (полнота) = верно найденные кошки ÷ все кошки, которые были</span>
+      <span class="formula">precision (точность) = верно найденные кошки ÷ все ответы «да»</span>
+      <p>Легко перепутать recall и precision. Запомни так: у полноты внизу — <b>все кошки</b>, у точности внизу — <b>все «да»</b>.</p>
+      <p>Хитрость, которую любят спрашивать: если модель на всё отвечает «нет», а кошек мало, accuracy будет высокой, а recall — нулевым. Высокая accuracy не значит, что модель хорошая. <span class="tag get">понять</span></p>
+    </div>
+
+    <div class="sect">
+      <h3>Правило и его ошибки <span class="tag get">понять</span></h3>
+      <p>Часто модель — это короткое правило вроде «слово оканчивается на -а или -я → женский род». Проверять надо каждое слово по двум столбикам: что скажет правило и как на самом деле. Считать только те строчки, где столбики разошлись. Ошибки бывают двух видов — правило сказало «да» там, где надо «нет» (папа, знамя), и правило сказало «нет» там, где надо «да» (речь). <b>Оба вида считаются.</b></p>
+      <p>Самое важное: <b>правило читают буквально, слово в слово</b>. «Есть буква а» и «оканчивается на -а» — это два разных правила, и ошибок у них получается разное количество: по первому правилу арбуз женского рода, по второму — нет. Выпиши правило из условия на черновик и проверяй по нему, а не по тому, как запомнилось.</p>
+      ${FIGS.rule}
+    </div>
+
+    <div class="sect">
+      <h3>Ответ большинством <span class="tag get">понять</span></h3>
+      <p>Представь трёх учеников, которые пишут один тест: на каждый вопрос каждый пишет «да» или «нет». Четвёртый, Ai-0, сам не думает — он смотрит, что написали трое, и копирует ответ, который встретился чаще. Поровну они разделиться не могут, потому что их нечётное число, значит большинство есть всегда.</p>
+      <p>Раскладов ровно четыре: все трое «да»; двое «да» и один «нет»; двое «нет» и один «да»; все трое «нет». В первых двух Ai-0 пишет «да», в остальных — «нет».</p>
+      <p>Отсюда весь приём: <b>Ai-0 говорит «да» в двух разных случаях</b> — когда все трое согласны и когда согласны только двое. Если известно, сколько всего у Ai-0 ответов «да» и сколько из них были единогласными, то вычитание даёт число вопросов с раскладом двое против одного. Именно там ровно одна модель осталась в меньшинстве.</p>
+      <p>Ловушка: спрашивают обычно «на скольких вопросах ровно одна модель <i>из четырёх</i> ответила „нет“». Ai-0 в этих вопросах говорит «да» вместе с двумя другими, так что «нет» всё равно звучит один раз — ответ не меняется. И ещё: часть чисел в условии бывает лишней, их специально кладут, чтобы запутать.</p>
+      ${FIGS.vote}
+    </div>
+
+    <div class="sect">
+      <h3>Метод предположения <span class="tag learn">выучить порядок действий</span></h3>
+      <p>Сначала на маленьком примере. Дней три, в каждый день либо 3 запроса, либо 5, всего вышло 11. Предполагаем самое простое: во все три дня было по 3. Тогда получилось бы 9, а нужно 11 — не хватает двух. Взять их можно только заменой одного дня с тройки на пятёрку, и одна такая замена прибавляет 2. Значит замена нужна одна: один день по 5, два дня по 3.</p>
+      <p>Вот и весь метод: делаем заведомо неверное, но простое предположение, смотрим, сколько не хватает, и считаем, сколько замен закроют разницу.</p>
+      <ul>
+        <li>посчитать, сколько вышло бы, <b>если бы всё было по меньшему</b>;</li>
+        <li>найти нехватку: настоящая сумма минус получившаяся;</li>
+        <li>разделить нехватку <b>на разницу между вариантами</b> — получится число «больших» дней;</li>
+        <li>если спрашивают про «маленькие» — вычесть это из общего числа дней.</li>
+      </ul>
+      <p>Два места, где чаще всего ошибаются. Первое: делят не на разницу, а на большее число — делить надо именно на разницу. Второе: находят число «больших» дней и записывают его в ответ, хотя спрашивали про «маленькие».</p>
+      <p>Проверка всегда одна и та же: перемножить и сложить обратно. 18 · 5 = 90, 12 · 3 = 36, вместе 126 — сошлось.</p>
+      <p>Тот же приём работает, когда предметы не просто разные, а один содержит другие. На столе 10 объектов, каждая папка хранит 5 файлов, всего файлов 42. Предполагаем, что все 10 объектов — файлы, тогда файлов было бы 10, не хватает 32. Замена файла на папку прибавляет 5 файлов внутри, но убирает сам файл со стола, то есть даёт +4. Папок 32 : 4 = 8. <b>Прибавка от одной замены — это то, что считают в первую очередь.</b></p>
+      <p>И держи в голове длины месяцев: в апреле 30 дней, в марте и мае — 31. <span class="tag learn">выучить</span></p>
+      ${FIGS.assume}
+    </div>
+
+    <div class="sect">
+      <h3>Повторяющийся узор <span class="tag learn">выучить приём</span></h3>
+      <p>Если у домов три цвета, соседи всегда разные и при этом у каждого дома два соседа тоже разного цвета, то любые три подряд идущих дома окрашены во все три цвета. Значит, раскраска повторяется через каждые три дома, и нужный цвет стоит на местах 1, 4, 7, 10… или 2, 5, 8… или 3, 6, 9…</p>
+      <p>Отсюда правило: <b>k-й дом нужного цвета стоит на месте r + 3·(k−1)</b>, где r равно 1, 2 или 3. Поэтому в ответе получается три числа подряд, и все три надо вписать в отдельные поля.</p>
+      <p>Для гирлянд и лент работает деление с остатком: остаток показывает место внутри повторяющегося куска.</p>
+      ${FIGS.period}
+    </div>
+
+    <div class="sect">
+      <h3>Суммы трёх чисел <span class="tag learn">выучить два факта</span></h3>
+      <p>Если числа разные и a &lt; b &lt; c, то наименьшая попарная сумма — это a+b, наибольшая — b+c, а их разница равна c − a.</p>
+      <p>Второй факт: если сложить все три попарные суммы, каждое число войдёт дважды, поэтому сумма самих чисел равна половине этого результата.</p>
+      ${FIGS.sums}
+      <p>Дальше идёт перебор: b стоит строго между a и c, вариантов немного, и лишние отсеиваются по чётности (сумма двух чисел одной чётности чётна). Это самая трудная задача варианта — если вечер кончается, оставь её на «решу, если останется время». <span class="tag get">понять</span></p>
+    </div>
+
+    <div class="sect">
+      <h3>Дерево решений и таблица <span class="tag learn">выучить порядок действий</span></h3>
+      <p>Дерево — это цепочка вопросов «да/нет», нарисованная ромбиками, а в квадратиках внизу стоят готовые ответы. Таблица истинности — это все сочетания признаков и итог для каждого. Двух признаков хватает на четыре строки, трёх — на восемь.</p>
+      <p>Заполняют так: берут строку, идут от верхнего ромбика вниз, на каждом ромбике сворачивают по своему ответу и записывают то, что в квадратике. <b>Если ветка уходит в квадратик сразу, второй признак не важен</b> — обе строки с таким началом дают один и тот же итог. Это и есть главная подсказка: одинаковые строки в таблице почти всегда есть.</p>
+      ${FIGS.tree}
+      <p>Здесь баллы дают за каждую клетку отдельно, поэтому заполнять нужно все, даже если в одной не уверена. <span class="tag get">понять</span></p>
+    </div>
+
+    <div class="sect">
+      <h3>Лучшее предсказание — середина <span class="tag learn">выучить приём</span></h3>
+      <p>Модель видит только часть данных, поэтому точного ответа она знать не может. Надо сообразить, в каких границах лежит правда: самое маленькое возможное значение и самое большое. Получается отрезок.</p>
+      <p>Если назвать край отрезка, в худшем случае промахнёшься на всю его длину. Если назвать середину — самое большее на половину длины. Поэтому <b>наименьшая возможная ошибка равна половине длины отрезка</b> (а если длина нечётная — половине, округлённой вверх).</p>
+      ${FIGS.interval}
+      <p>Порядок действий: найти нижнюю границу, найти верхнюю, вычесть одну из другой, разделить пополам. Отвечать надо именно этой половиной, а не самим предсказанием.</p>
+    </div>
+
+    <div class="sect">
+      <h3>Проверка по ходу <span class="tag get">понять</span></h3>
+      <p>Программа проверяет ответы по одному и останавливается, как только среди <i>уже проверенных</i> верных стало меньше половины. Значит, важен порядок ответов, а не только их количество.</p>
+      <p>Два крайних случая, которые и спрашивают:</p>
+      <ul>
+        <li>чтобы дойти до конца, нужно на каждом шаге держать половину — поэтому у «сдавшего» верных не меньше половины всех заданий;</li>
+        <li>чтобы завалиться пораньше, достаточно ошибиться в первом же ответе — тогда у «не сдавшего» верными могут быть все остальные.</li>
+      </ul>
+      <p>Дальше вычитание: наибольшее у одного минус наименьшее у другого. И обязательно проверь, что крайний случай <b>действительно возможен</b> — придумай, в каком порядке идут ответы.</p>
+    </div>
+
+    <div class="sect">
+      <h3>Границы: прижать с двух сторон <span class="tag learn">выучить приём</span></h3>
+      <p>Когда про каждую величину известны только границы («не меньше 35», «от 19 до 27»), условие переписывают так, чтобы слева стояло одно, а справа другое. Потом левую часть оценивают снизу (берут все наименьшие значения), а правую — сверху (все наибольшие).</p>
+      <p>Если эти две оценки совпали, вариант остаётся единственный: <b>все величины равны своим границам</b>, и ответ считается прямым сложением. Если левая оценка окажется больше правой — ситуация невозможна.</p>
+      <p>Осторожно с «спрятанными» нижними границами: «не более 18 баллов, но хотя бы за одну задачу 7» — это значит не только «не больше 18», но и «не меньше 7».</p>
+    </div>
+
+    <div class="sect">
+      <h3>Обход клеток <span class="tag get">понять</span></h3>
+      <p>Закрашивание идёт по соседним клеткам и останавливается, когда у последней закрашенной клетки все соседи по стороне уже закрашены. Чтобы остановиться пораньше, надо прийти туда, где соседей мало: у угла их два, у клетки на краю три, внутри доски четыре.</p>
+      <p>Поэтому на любой прямоугольной доске ответ 4: три клетки вокруг угла, потом сам угол. Тремя обойтись нельзя — двух соседей угла нужно закрасить до него, а между собой они не соседствуют, и подряд пройти их не получится.</p>
+      ${FIGS.grid}
+    </div>
+
+    <div class="sect">
+      <h3>Блоки одинаковых цифр <span class="tag learn">выучить формулу</span></h3>
+      <p>Запись числа разбивают на блоки подряд идущих одинаковых цифр: 1112211 — это блоки 111, 22, 11. В блоке длиной L ровно L − 1 пара соседей.</p>
+      <span class="formula">пар единиц = (сколько всего единиц) − (сколько блоков из единиц)</span>
+      <p>Блоки единиц и двоек всегда чередуются, поэтому их количества отличаются не больше чем на один: поровну — когда первая и последняя цифры разные, и на один больше — когда они одинаковые.</p>
+      <p>Чтобы число вышло <b>наименьшим</b>, единицы сдвигают как можно левее: у самого маленького числа сначала идут все единицы, а двойки — в конце.</p>
+    </div>
+
+    <div class="sect">
+      <h3>Как записывать ответ <span class="tag learn">выучить</span></h3>
+      <ul>
+        <li>В поле пишется только число, без слов и без единиц измерения.</li>
+        <li>Десятичную дробь писать через запятую: 0,8. Если поле не принимает — попробовать точку.</li>
+        <li>Если ответов несколько, каждый вписывается в своё поле, поля добавляются кнопкой. Пропущенный вариант — потерянные баллы.</li>
+        <li>Все вычисления — в столбик на черновике. Больше всего баллов теряется не на идее, а на арифметике.</li>
+        <li>В таблице (дерево решений) заполняются все клетки: каждая верная даёт свои баллы, пустая не даёт ничего.</li>
+        <li>Если условие выглядит противоречиво — например, в нём есть опечатка, — реши оба понимания и выбери то, при котором ответ вообще существует.</li>
+      </ul>
+    </div>`
+  },
+  {
+    id:"a",
+    tab:"1. Большинство голосов",
+    lead:"<b>Приём:</b> ответ «по большинству» из трёх моделей означает, что вопросы делятся на четыре группы: 3:0 «да», 2:1 «да», 2:1 «нет», 3:0 «нет». Единогласные группы даны в условии — остальное получается вычитанием.",
+    tasks:[
+      {q:"Три модели отвечают на 30 вопросов «да» или «нет». Модель Ai-0 даёт ответ большинства. Единогласных «нет» — 8 вопросов, единогласных «да» — 9 вопросов, а Ai-0 ответила «да» на 14 вопросов. На скольких вопросах ровно одна модель из четырёх ответила «нет»?",
+       hint:"«Да» у Ai-0 бывает в двух случаях: 3:0 и 2:1. Единогласных «да» вы знаете.",
+       sol:"14 − 9 = 5 вопросов с раскладом 2:1 в пользу «да». В каждом из них ровно одна модель сказала «нет», и Ai-0 сказала «да». Ответ: 5.",
+       fig:"vote", ans:["5"]},
+      {q:"Три модели отвечают на 40 вопросов, Ai-0 — по большинству. Ai-0 ответила «нет» на 22 вопроса, из них единогласных «нет» — 15. На скольких вопросах ровно одна модель ответила «да»?",
+       hint:"22 «нет» = единогласные + расклады 2:1.",
+       sol:"22 − 15 = 7 вопросов с раскладом 2:1 в пользу «нет», в каждом ровно одна модель сказала «да». Ответ: 7.",
+       ans:["7"]},
+      {q:"В классе 30 человек: 18 занимаются робототехникой, 15 — шахматами, 5 не занимаются ничем. Сколько человек занимаются и тем и другим?",
+       hint:"Сначала найдите, сколько занимаются хотя бы чем-то одним.",
+       sol:"Хотя бы одним: 30 − 5 = 25. Если сложить кружки: 18 + 15 = 33, лишние 33 − 25 = 8 — это те, кого посчитали дважды. Ответ: 8.",
+       fig:"venn", ans:["8"]},
+      {q:"Две модели решали 30 задач. Первая решила верно 25, вторая — 22. Какое наименьшее число задач могли решить верно обе?",
+       hint:"Посчитайте ошибки, а не верные ответы.",
+       sol:"Ошибок у первой 5, у второй 8, вместе не больше 13 разных задач испорчены. Значит, обе верны минимум на 30 − 13 = 17 задачах. Ответ: 17.",
+       ans:["17"]}
+    ]
+  },
+  {
+    id:"b",
+    tab:"2. Два вида по столько-то",
+    lead:"<b>Приём «предположим, что все одинаковые»:</b> считаем, сколько получилось бы при самом маленьком варианте, находим нехватку и делим её на разницу между вариантами.",
+    tasks:[
+      {q:"Гриша каждый день апреля отправлял модели ИИ либо 3, либо 5 запросов, всего 126 запросов. Сколько было дней по 3 запроса? (В апреле 30 дней.)",
+       hint:"Если бы все 30 дней было по 3 запроса, вышло бы 90.",
+       sol:"90 запросов при «всё по 3». Нехватка 126 − 90 = 36. Каждый день «по 5» добавляет 2 запроса: 36 : 2 = 18 дней по 5. Значит, по 3 запроса — 30 − 18 = 12 дней. Ответ: 12.",
+       fig:"assume", ans:["12"]},
+      {q:"За 30 дней робот отправлял либо 2, либо 6 отчётов в день, всего 116 отчётов. Сколько было дней по 2 отчёта?",
+       hint:"«Всё по 2» даёт 60.",
+       sol:"116 − 60 = 56; разница вариантов 4; 56 : 4 = 14 дней по 6. Дней по 2: 30 − 14 = 16. Ответ: 16.",
+       ans:["16"]},
+      {q:"Модель разложила 45 файлов по 9 папкам: в каждой папке либо 4 файла, либо 7. Сколько папок с семью файлами?",
+       hint:"«Все по 4» — это 36 файлов.",
+       sol:"45 − 36 = 9; разница 3; 9 : 3 = 3 папки по 7. Ответ: 3.",
+       ans:["3"]},
+      {q:"В тесте 20 вопросов: за верный ответ +5 баллов, за неверный −2. Ученик набрал 65 баллов, ответив на все вопросы. Сколько верных ответов?",
+       hint:"Все верные дали бы 100 баллов. Сколько баллов теряется на одной ошибке?",
+       sol:"Одна ошибка отнимает 5 + 2 = 7 баллов. Потеряно 100 − 65 = 35, значит ошибок 5, верных 15. Ответ: 15.",
+       ans:["15"]}
+    ]
+  },
+  {
+    id:"c",
+    tab:"3. Правило и его ошибки",
+    lead:"<b>Приём:</b> модель — это простое правило. Проходим по списку и для каждого объекта сравниваем два ответа: что скажет правило и как на самом деле. Считаем только расхождения.",
+    tasks:[
+      {q:"Модель считает, что слово стоит во множественном числе, если оно оканчивается на «и» или «ы». Слова: столы, такси, облака, мыши, пони, окно, дети, дома, ножницы, молоко. Для скольких слов модель ошибается?",
+       hint:"Ошибка бывает двух видов: правило сказало «да», а число единственное, и наоборот.",
+       sol:"Ошибки: такси и пони (правило говорит «мн. ч.», а слова единственного числа), облака и дома (множественное число, но правило говорит «нет»). Ответ: 4.",
+       ans:["4"]},
+      {q:"Модель считает число чётным, если в его записи есть хотя бы одна из цифр 0, 2, 4, 6, 8. Числа: 12, 23, 41, 55, 30, 17, 64, 99, 105, 86. Сколько ошибок?",
+       hint:"Проверяйте по последней цифре — она решает на самом деле.",
+       sol:"Ошибки на 23, 41 и 105: в записи есть «нужная» цифра, но числа нечётные. Остальные восемь классифицированы верно. Ответ: 3.",
+       ans:["3"]},
+      {q:"Правило: «если слово оканчивается на -а, это женский род». Напишите одно слово, на котором правило ошибается.",
+       hint:"Подумайте о том, как называют людей: мужчин тоже называют словами на -а.",
+       sol:"Например: папа, дядя, юноша, мужчина, воевода, староста, дедушка. Все они мужского рода, но оканчиваются на -а/-я.",
+       ans:["папа","дядя","юноша","мужчина","воевода","староста","дедушка","судья","слуга","коллега","сирота","задира"], free:true},
+      {q:"Фильтр помечает письмо как спам, если в нём есть слово «выигрыш». Из 12 писем это слово есть в 5, и 4 из них действительно спам. Среди остальных 7 писем спамом является 1. Сколько писем фильтр определит неверно?",
+       hint:"Ошибки: не спам, но помечен; спам, но пропущен.",
+       sol:"Одно письмо со словом «выигрыш» не спам — ложное срабатывание. Одно письмо без этого слова — спам, но пропущено. Всего 2 ошибки. Ответ: 2.",
+       ans:["2"]}
+    ]
+  },
+  {
+    id:"d",
+    tab:"4. Суммы и чётность",
+    lead:"<b>Приём:</b> у трёх различных чисел a &lt; b &lt; c наименьшая попарная сумма — это a+b, наибольшая — b+c, а их разница равна c − a. Дальше выручает перебор с проверкой чётности.",
+    tasks:[
+      {q:"Петя задал модели три попарно различных натуральных числа. Наименьшая из попарных сумм равна 60, наибольшая — 64. Чему равна сумма всех трёх чисел?",
+       hint:"Из разницы сумм найдите c − a, а потом переберите, где может стоять b.",
+       sol:"64 − 60 = 4, значит c = a + 4, а b — одно из a+1, a+2, a+3. Из a + b = 60 сумма a+b чётная, поэтому подходит только b = a + 2: a = 29, b = 31, c = 33. Сумма 93.",
+       fig:"sums", ans:["93"]},
+      {q:"Попарные суммы трёх различных натуральных чисел равны 20, 24 и 26. Чему равна сумма самих чисел?",
+       hint:"Сложите все три попарные суммы: каждое число войдёт ровно дважды.",
+       sol:"(20 + 24 + 26) : 2 = 35. (Сами числа: 9, 11 и 15.) Ответ: 35.",
+       ans:["35"]},
+      {q:"Сумма трёх различных натуральных чисел равна 12. Каким наибольшим может быть самое большое из них?",
+       hint:"Два других сделайте как можно меньше — но они должны различаться.",
+       sol:"Наименьшие возможные: 1 и 2, тогда третье равно 12 − 3 = 9. Ответ: 9.",
+       ans:["9"]},
+      {q:"Гриша говорит, что задумал три различных натуральных числа, у которых попарные суммы равны 10, 11 и 12. Такое возможно? Ответьте «да» или «нет».",
+       hint:"Сумма всех попарных сумм равна удвоенной сумме чисел.",
+       sol:"10 + 11 + 12 = 33 — нечётное, а должно быть вдвое больше суммы чисел, то есть чётным. Значит, таких чисел нет. Ответ: нет.",
+       ans:["нет","не может","невозможно","нельзя"], free:true}
+    ]
+  },
+  {
+    id:"e",
+    tab:"5. Повторяющийся узор",
+    lead:"<b>Приём:</b> если ни у одного дома соседи не совпадают по цвету и соседи каждого дома тоже разного цвета, то любые три подряд идущих дома окрашены во все три цвета — раскраска повторяется с периодом 3. Дальше работает деление с остатком.",
+    tasks:[
+      {q:"Вдоль дороги 60 домов, крыши зелёные, жёлтые или синие. Никакие два соседних дома не одного цвета, и у каждого дома два соседа разного цвета. Робот везёт заказ в седьмой по счёту дом с зелёной крышей. Какими могут быть его номера? Перечислите все варианты через запятую.",
+       hint:"Зелёные дома идут через каждые три: первый из них — дом 1, 2 или 3.",
+       sol:"Зелёные стоят на местах r, r+3, r+6, …, где r = 1, 2 или 3. Седьмой зелёный — это r + 18, то есть 19, 20 или 21.",
+       fig:"period", ans:["19,20,21"], set:true},
+      {q:"В том же посёлке из 100 домов (период раскраски 3) — сколько всего может быть зелёных домов? Перечислите варианты через запятую.",
+       hint:"100 = 3 · 33 + 1. Важно, попадает ли остаток на зелёный.",
+       sol:"Если зелёные начинаются с первого дома, их 34; если со второго или третьего — 33. Ответ: 33, 34.",
+       ans:["33,34"], set:true},
+      {q:"Гирлянда собрана из повторяющихся троек: красная, синяя, зелёная, красная, синяя, зелёная… Какого цвета 47-я лампочка?",
+       hint:"Разделите 47 на 3 с остатком.",
+       sol:"47 = 3 · 15 + 2, остаток 2 — вторая в тройке. Ответ: синяя.",
+       ans:["синяя","синий","синее"], free:true},
+      {q:"Лента раскрашена повторяющимся узором: 2 красные клетки, потом 3 синие, потом снова 2 красные и 3 синие. Какого цвета 38-я клетка?",
+       hint:"Период равен 5 клеткам.",
+       sol:"38 = 5 · 7 + 3, остаток 3 — третья клетка в блоке, а третья, четвёртая и пятая синие. Ответ: синяя.",
+       ans:["синяя","синий","синее"], free:true}
+    ]
+  },
+  {
+    id:"f",
+    tab:"6. Качество модели",
+    lead:"<b>Приём:</b> разложите ответы на четыре кучки — верно найденные кошки, ложные тревоги, пропущенные кошки и верно отвергнутые. <br>Accuracy = все верные ответы ÷ все изображения. Recall (полнота) = найденные кошки ÷ все кошки на снимках. Precision (точность) = найденные кошки ÷ все ответы «да».",
+    tasks:[
+      {q:"На 50 изображениях кошки есть на 20. Модель верно нашла 12 кошек и ещё 5 раз сказала «да» там, где кошки нет. Сколько изображений классифицированы правильно?",
+       hint:"Верные ответы — это найденные кошки плюс правильные «нет».",
+       sol:"Правильных «да»: 12. Изображений без кошек 30, из них 5 испорчены, значит правильных «нет» 25. Всего 12 + 25 = 37.",
+       fig:"matrix", ans:["37"]},
+      {q:"В той же задаче найдите полноту (recall) поиска кошек. Ответ дайте десятичной дробью.",
+       hint:"Сколько кошек нашли из всех, что были.",
+       sol:"12 : 20 = 0,6.",
+       ans:["0.6","0,6","3/5","60%","60"]},
+      {q:"В той же задаче найдите долю правильных ответов (accuracy). Ответ дайте десятичной дробью.",
+       hint:"Все верные ответы делим на число всех изображений.",
+       sol:"37 : 50 = 0,74.",
+       ans:["0.74","0,74","74%","74"]},
+      {q:"Ленивая модель на все 100 изображений отвечает «нет». Кошки есть на 10 из них. Чему равна accuracy этой модели? Ответ дайте десятичной дробью.",
+       hint:"Она права на всех изображениях без кошек.",
+       sol:"Верных ответов 90, accuracy = 0,9. При этом recall равен 0 — модель не нашла ни одной кошки. Поэтому по одной accuracy судить о модели нельзя.",
+       ans:["0.9","0,9","90%","90","0,90","0.90"]},
+      {q:"Из 40 фотографий модель ответила «да» 9 раз, и 7 из этих ответов верны. Всего кошки есть на 11 фотографиях. Сколько фотографий классифицировано правильно?",
+       hint:"Ложных «да» — 2; пропущенных кошек — 11 − 7.",
+       sol:"Правильных «да» 7. Фотографий без кошек 29, из них 2 помечены ошибочно, значит правильных «нет» 27. Всего 7 + 27 = 34 (accuracy 0,85, recall 7/11).",
+       ans:["34"]}
+    ]
+  }
+  ,
+  {
+    id:"g",
+    tab:"7. Дерево решений",
+    lead:"<b>Приём:</b> дерево — это цепочка вопросов «да/нет». Чтобы заполнить таблицу, берут каждое сочетание признаков и идут по дереву сверху вниз до квадратика с ответом. Сочетаний из двух признаков всегда четыре, из трёх — восемь.",
+    tasks:[
+      {q:"Дерево: «Есть пропуск?» — если нет, впускаем. Если да, задаётся второй вопрос «Пришёл с учителем?»: если да — не впускаем, если нет — впускаем. Запишите четыре ответа таблицы по порядку строк нет/нет, нет/да, да/нет, да/да — через запятую.",
+       hint:"Если в первом вопросе ответ «нет», второй вопрос вообще не задаётся, значит обе такие строки дают один и тот же итог.",
+       sol:"Левая ветка ведёт прямо в лист «Да», поэтому первые две строки одинаковые. Правая ветка разветвляется: без учителя — «Да», с учителем — «Нет». Ответ: да, да, да, нет.",
+       fig:"tree", ans:["да, да, да, нет"], seq:true},
+      {q:"В том же дереве: на скольких сочетаниях из четырёх ребёнка впускают?",
+       hint:"Посчитайте строки таблицы с итогом «да».",
+       sol:"Три строки дают «да», и только сочетание «пропуск есть, пришёл с учителем» даёт «нет». Ответ: 3.",
+       ans:["3"]},
+      {q:"Дерево: «На фото есть усы?» — если нет, модель отвечает «не кошка». Если да, спрашивает «Есть хвост?»: если да — «кошка», если нет — «не кошка». На скольких сочетаниях из четырёх модель отвечает «кошка»?",
+       hint:"Пройдите все четыре сочетания: нет/нет, нет/да, да/нет, да/да.",
+       sol:"Ответ «кошка» получается только при да/да. Ответ: 1.",
+       ans:["1"]},
+      {q:"Сколько строк будет в таблице истинности, если признаков не два, а три?",
+       hint:"Каждый новый признак удваивает число сочетаний.",
+       sol:"Два признака дают 4 сочетания, три — 4 · 2 = 8. Ответ: 8.",
+       ans:["8"]},
+      {q:"В дереве про пропуск ребёнок пришёл с пропуском, но без учителя. Впустят его? Ответьте «да» или «нет».",
+       hint:"Первый ответ «да» ведёт ко второму вопросу, а там ответ «нет».",
+       sol:"Сочетание да/нет приводит в лист «Да». Ответ: да.",
+       ans:["да"], free:true}
+    ]
+  },
+  {
+    id:"h",
+    tab:"8. Предсказание с наименьшей ошибкой",
+    lead:"<b>Приём:</b> модель видит только часть данных, поэтому верный ответ может оказаться где угодно на отрезке от самого маленького возможного значения до самого большого. Выгоднее всего назвать середину отрезка: тогда промах в худшем случае равен половине его длины.",
+    tasks:[
+      {q:"В строке 70 символов. Среди первых 40 символов ровно m различных. Модель по числу m предсказывает, сколько различных символов во всей строке, и ошибкой считается разница между её ответом и правдой. При каком наименьшем N ошибка точно не превысит N?",
+       hint:"Оставшиеся 30 символов могут все повторять уже встреченные, а могут все оказаться новыми.",
+       sol:"Различных символов во всей строке не меньше m и не больше m + 30 — оба края возможны. Длина отрезка 30, середина m + 15. Назвав её, модель промахнётся не больше чем на 15, а меньше 15 не сделать ни при каком предсказании. Ответ: 15.",
+       fig:"interval", ans:["15"]},
+      {q:"То же самое, но строка из 60 символов, а различные считают среди первых 40. Какая наименьшая ошибка N?",
+       hint:"Сколько символов остаётся за пределами первых сорока?",
+       sol:"Остаётся 20 символов, значит верный ответ лежит от m до m + 20. Половина длины отрезка равна 10. Ответ: 10.",
+       ans:["10"]},
+      {q:"Модель из первой задачи ленивая: она всегда называет само число m. На сколько она может промахнуться в худшем случае?",
+       hint:"Худший случай — когда все оставшиеся символы новые.",
+       sol:"Тогда различных будет m + 30, а модель сказала m: промах 30 — вдвое хуже, чем у предсказания серединой. Ответ: 30.",
+       ans:["30"]},
+      {q:"Верное число может оказаться любым от 8 до 21. Какой наименьшей может быть ошибка предсказания в худшем случае?",
+       hint:"Длина отрезка 21 − 8 = 13 — нечётная, ровно посередине целого числа нет.",
+       sol:"Можно назвать 14 или 15: от любого из них до дальнего края 7. Меньше не получится, потому что половина от 13 — это 6,5, а ответ должен быть целым. Ответ: 7.",
+       ans:["7"]}
+    ]
+  },
+  {
+    id:"i",
+    tab:"9. Проверка по ходу",
+    lead:"<b>Приём:</b> программа проверяет ответы по одному и останавливается, как только среди уже проверенных верных оказалось меньше половины. Поэтому важен не только итог, но и порядок ответов: чтобы дойти до конца, на каждом шаге верных должно быть не меньше половины проверенного.",
+    tasks:[
+      {q:"В тесте 20 вопросов. Программа проверяет по одному и ставит «Не сдано», как только среди проверенных верных стало меньше половины. Какое наименьшее число верных ответов может быть у того, кто получил «Сдано»?",
+       hint:"Если на каждом шаге верных не меньше половины, то и в самом конце их не меньше половины от 20.",
+       sol:"К концу проверено 20 ответов, и верных среди них не меньше половины, то есть не меньше 10. Ровно 10 бывает: сначала 10 верных подряд, потом 10 неверных — на каждом шаге доля верных не падает ниже половины. Ответ: 10.",
+       ans:["10"]},
+      {q:"Тот же тест из 20 вопросов. Какое наибольшее число верных ответов может быть у того, кто получил «Не сдано»?",
+       hint:"Чтобы программа остановилась как можно раньше, пусть самый первый ответ будет неверным.",
+       sol:"Если первый ответ неверный, то уже после первой проверки верных ноль из одного — меньше половины, и программа сразу ставит «Не сдано». Все остальные 19 ответов могут быть верными: их просто не успели проверить. Ответ: 19.",
+       ans:["19"]},
+      {q:"Вася получил «Сдано», Петя — «Не сдано», и при этом у Пети верных ответов на N больше, чем у Васи. Найдите наибольшее возможное N (в тесте 20 вопросов).",
+       hint:"Возьмите наибольшее возможное у Пети и наименьшее возможное у Васи.",
+       sol:"У Пети самое большее 19 верных, у Васи самое меньшее 10. Разница 19 − 10 = 9. Ответ: 9.",
+       ans:["9"]},
+      {q:"Ученик ответил верно на 15 вопросов из 20, но самый первый его ответ неверный. Какую оценку поставит программа — «сдано» или «не сдано»?",
+       hint:"Программа смотрит на долю верных после каждой проверки, а не в конце.",
+       sol:"После первой проверки верных ноль из одного — меньше половины, проверка обрывается. Ответ: не сдано.",
+       ans:["не сдано","несдано"], free:true},
+      {q:"Тест сократили до 10 вопросов, правило то же. Какова наибольшая разница между числом верных ответов у «не сдавшего» и у «сдавшего»?",
+       hint:"Посчитайте по тому же образцу: наибольшее у одного и наименьшее у другого.",
+       sol:"У не сдавшего самое большее 9 верных (первый неверный), у сдавшего самое меньшее 5. Разница 9 − 5 = 4. Ответ: 4.",
+       ans:["4"]}
+    ]
+  },
+  {
+    id:"j",
+    tab:"10. Границы и диапазоны",
+    lead:"<b>Приём:</b> когда известны только границы («не меньше 35», «не больше 34»), оценивают одну часть условия сверху, другую снизу. Если границы сходятся вплотную, все величины определяются однозначно — вариант остаётся единственный.",
+    tasks:[
+      {q:"Известно, что x не меньше 20, y не больше 12 и при этом x = y + 8. Чему равен x?",
+       hint:"Раз y не больше 12, то y + 8 не больше 20. А x при этом не меньше 20.",
+       sol:"x = y + 8 ≤ 12 + 8 = 20, и одновременно x ≥ 20. Значит x равен ровно 20 (а y равен 12). Ответ: 20.",
+       ans:["20"]},
+      {q:"Золотая медаль — не меньше 35 баллов. Похвальная грамота — не больше 18 баллов, но хотя бы за одну задачу получено 7. Какой наименьшей может быть сумма баллов золотого призёра и обладателя грамоты?",
+       hint:"У грамоты есть не только верхняя граница, но и нижняя: хотя бы одна задача на 7 баллов.",
+       sol:"Наименьшее у золота 35, наименьшее у грамоты 7. Сумма 35 + 7 = 42. Ответ: 42.",
+       ans:["42"]},
+      {q:"Серебро — от 28 до 34 баллов, бронза — от 19 до 27. Какой наибольшей может быть сумма баллов серебряного и бронзового призёров?",
+       hint:"Берите верхние границы обоих диапазонов.",
+       sol:"34 + 27 = 61. Ответ: 61.",
+       ans:["61"]},
+      {q:"Четыре модели: у первой золото, у второй серебро, у третьей бронза, у четвёртой похвальная грамота (границы из двух предыдущих задач). Сумма баллов первой и четвёртой на 19 меньше, чем сумма второй и третьей. Сколько баллов набрали все четыре модели вместе?",
+       hint:"Перепишите условие так: (первая + четвёртая) + 19 = (вторая + третья). Слева не меньше 42 + 19, справа не больше 61.",
+       sol:"Слева не меньше 42 + 19 = 61, справа не больше 61 — значит обе части равны 61 и все границы достигнуты: 35, 34, 27 и 7. Сумма 35 + 34 + 27 + 7 = 103. Ответ: 103.",
+       ans:["103"]}
+    ]
+  },
+  {
+    id:"k",
+    tab:"11. Обход клеток",
+    lead:"<b>Приём:</b> закрашивание останавливается только тогда, когда у последней закрашенной клетки все соседи по стороне уже закрашены. Быстрее всего это выходит в углу: там соседей всего два. Поэтому короткий путь ищут такой, который заканчивается в углу.",
+    tasks:[
+      {q:"Сколько соседей по стороне у угловой клетки доски 8×8?",
+       hint:"Соседи по стороне — это клетки сверху, снизу, слева и справа. У угла две из них отсутствуют.",
+       sol:"У угловой клетки есть только сосед сбоку и сосед снизу. Ответ: 2.",
+       ans:["2"]},
+      {q:"Белый квадрат 8×8. Сначала закрашивают любую клетку, а каждым следующим шагом — клетку, соседнюю по стороне с закрашенной на предыдущем шаге. Как только соседних незакрашенных клеток нет, всё заканчивается. Какое наименьшее число клеток может быть закрашено?",
+       hint:"Закончить нужно в углу, а перед этим закрасить обоих его соседей.",
+       sol:"Пример на четыре клетки: соседняя с углом клетка сверху, потом клетка по диагонали от угла, потом второй сосед угла, потом сам угол — у него оба соседа уже закрашены. Меньше нельзя: у последней клетки должны быть закрашены все соседи, а два соседа угла между собой не соседствуют, поэтому за три шага их не пройти. Ответ: 4.",
+       fig:"grid", ans:["4"]},
+      {q:"То же правило, но доска 5×5. Какое наименьшее число клеток?",
+       hint:"Рассуждение про угол от размера доски не зависит.",
+       sol:"Угол по-прежнему имеет двух соседей, и тот же путь из четырёх клеток работает. Ответ: 4.",
+       ans:["4"]},
+      {q:"Полоска из восьми клеток в один ряд, правило то же. Какое наименьшее число клеток может быть закрашено?",
+       hint:"У крайней клетки полоски сосед всего один.",
+       sol:"Начинаем со второй клетки, шагаем в первую — у неё единственный сосед уже закрашен, и всё останавливается. Ответ: 2.",
+       ans:["2"]}
+    ]
+  },
+  {
+    id:"l",
+    tab:"12. Блоки одинаковых цифр",
+    lead:"<b>Приём:</b> разбейте запись числа на блоки подряд идущих одинаковых цифр. В блоке длиной L ровно L − 1 пара соседей. Значит, пар единиц = (сколько всего единиц) − (сколько блоков из единиц), и то же самое для двоек.",
+    tasks:[
+      {q:"Сколько всего пар соседних одинаковых цифр в числе 1112211?",
+       hint:"Блоки: 111, 22, 11. В блоке из трёх цифр пар две, в блоке из двух — одна.",
+       sol:"В блоке 111 две пары, в блоке 22 одна, в блоке 11 одна. Всего 2 + 1 + 1 = 4. Ответ: 4.",
+       ans:["4"]},
+      {q:"В числе 40 единиц, и они стоят пятью блоками. Сколько пар соседних единиц в этом числе?",
+       hint:"Каждый блок «съедает» одну пару: в блоке длиной L пар L − 1.",
+       sol:"40 − 5 = 35. Ответ: 35.",
+       ans:["35"]},
+      {q:"Стозначное число записано цифрами 1 и 2, единиц в нём ровно 50, а первая и последняя цифры разные. Верно ли, что пар соседних единиц столько же, сколько пар соседних двоек? Ответьте «да» или «нет».",
+       hint:"Когда края разные, блоков единиц и блоков двоек поровну.",
+       sol:"Единиц и двоек по 50, а блоков того и другого вида поровну (они чередуются, и края разные). Значит, 50 − число блоков совпадает для обеих цифр. Ответ: да.",
+       ans:["да"], free:true},
+      {q:"Модель отвечает ДА на вопрос «пар соседних единиц столько же, сколько пар соседних двоек», если единиц ровно 50, и НЕТ в остальных случаях. Найдите наименьшее стозначное число из цифр 1 и 2, на котором модель ошибается, и запишите сумму десяти его последних цифр.",
+       hint:"Ошибка возможна только при 50 единицах, когда первая и последняя цифры одинаковые. Наименьшее число получается, если все единицы сдвинуть как можно левее.",
+       sol:"При 50 единицах и разных краях модель права, значит ошибка бывает только при совпадающих краях. Самое маленькое такое число: 49 единиц, затем 50 двоек, затем одна единица. Последние десять цифр — девять двоек и единица: 9 · 2 + 1 = 19. Ответ: 19.",
+       ans:["19"]}
+    ]
+  }
+
+];
+
+const KEY = [
+  {t:"Задание 1", fig:"vote", a:"3",
+   s:"Единогласных «да» — 12, а Ai-0 сказала «да» 15 раз. Оставшиеся 15 − 12 = 3 вопроса имеют расклад 2:1, и в каждом ровно одна модель ответила «нет»."},
+  {t:"Задание 2", fig:"assume", a:"12",
+   s:"В апреле 30 дней. Если бы всегда по 3 запроса — 90. Нехватка 36, каждый «пятизапросный» день добавляет 2 → 18 дней по 5 и 12 дней по 3."},
+  {t:"Задание 3", fig:"rule", a:"5",
+   s:"Модель ошибается на словах арбуз, знамя, король, папа, пароль. Остальные семь (интеллект, куст, мама, олимпиада, речь, салют, ягода) она определяет верно."},
+  {t:"Задание 4", fig:"sums", a:"153",
+   s:"Наибольшая сумма 104, наименьшая 100, значит c − a = 4, а b лежит строго между. Из чётности a + b = 100 получаем 49, 51, 53; их сумма 153."},
+  {t:"Задание 5", fig:"period", a:"28, 29, 30",
+   s:"Условие про соседей заставляет раскраску повторяться с периодом 3, поэтому зелёные дома стоят на местах r, r+3, r+6, … Десятый зелёный — это r + 27 при r = 1, 2, 3."},
+  {t:"Задание 6", fig:"matrix", a:"16 правильных; recall = 2/6 ≈ 0,33; accuracy = 0,8",
+   s:"Кошки на 6 снимках (в том числе зевающая белая кошка, тёмная кошка с игрушкой, сфинкс и кот в праздничном колпаке), модель узнала только двух. Верных ответов: 2 «да» + 14 «нет» = 16.",
+   note:"Пересчитайте кошек вместе с дочерью по картинкам: спорным может оказаться снимок с лысым животным у окна в первом ряду. Если кошек окажется 7, то верных ответов 15, recall = 2/7, accuracy = 0,75."}
+];
+
+const KEY2 = [
+  {t:"Задание 1. Папки и файлы", a:"8",
+   s:"На столе 10 объектов, в каждой папке по 5 файлов, всего файлов 42. Предположим, что все 10 объектов — файлы: тогда файлов было бы 10. Не хватает 32. Замена одного файла на папку добавляет 5 файлов внутри, но убирает сам этот файл со стола, то есть прибавляет 4. Значит папок 32 : 4 = 8."},
+  {t:"Задание 2. Закрашивание клеток", a:"4",
+   s:"Процесс останавливается, когда у последней закрашенной клетки все соседи по стороне уже закрашены. Дешевле всего заканчивать в углу: у него два соседа. Путь из четырёх клеток существует, а трёх не хватает, потому что два соседа угла между собой не соседствуют и подряд их не пройти.",
+   fig:"grid"},
+  {t:"Задание 3. Предсказание по части строки", a:"15",
+   s:"Если среди первых 40 символов ровно m различных, то во всей строке из 70 их не меньше m и не больше m + 30. Лучшее предсказание — середина отрезка, m + 15, и промах тогда не больше 15. Любое другое число даёт в худшем случае больше.",
+   fig:"interval"},
+  {t:"Задание 4. Проверка теста по ходу", a:"9",
+   s:"Чтобы получить «Сдано», нужно на каждом шаге держать не меньше половины верных, поэтому к концу верных не меньше 10 — и ровно 10 бывает. Чтобы получить «Не сдано» с как можно большим числом верных, достаточно ошибиться в первом же ответе: проверка обрывается сразу, а остальные 19 могут быть верными. Разница 19 − 10 = 9."},
+  {t:"Задание 5. Медали и баллы", a:"103",
+   s:"Условие переписывается так: (золото + грамота) + 19 = (серебро + бронза). Слева не меньше 35 + 7 + 19 = 61, справа не больше 34 + 27 = 61. Значит обе части равны 61, и все четыре результата определены однозначно: 35, 34, 27 и 7. Их сумма 103.",
+   note:"В самом условии опечатка: там написано «на 19 баллов меньше больше». Разбор считает по варианту «меньше» — то есть первая и четвёртая набрали меньше. Если на олимпиаде встретится такая же формулировка, стоит решить оба варианта и выбрать тот, где ответ вообще существует."},
+  {t:"Задание 6. Стозначное число из единиц и двоек", a:"19",
+   s:"В блоке из L одинаковых цифр ровно L − 1 пара соседей, поэтому пар единиц столько же, сколько пар двоек, только когда единиц ровно 50 и первая с последней цифрой разные. Модель же смотрит только на число единиц, значит ошибается ровно тогда, когда единиц 50, но края совпадают. Наименьшее такое число — 49 единиц, потом 50 двоек, потом единица. Последние десять цифр: девять двоек и единица, сумма 19."},
+  {t:"Задание 7. Дерево решений", a:"да, да, да, нет",
+   s:"Ветка «пропуска нет» ведёт прямо в лист «Да», поэтому первые две строки таблицы одинаковые. Ветка «пропуск есть» задаёт второй вопрос: без учителя — «Да», с учителем — «Нет». За каждую верную клетку дают 3 балла, так что заполнять стоит все четыре, даже если в одной не уверены.",
+   fig:"tree"}
+];
+
+const norm = s => s.toLowerCase().trim().replace(/ё/g,"е").replace(/\s+/g,"").replace(/,(\d)/g,".$1");
+const normSet = s => s.toLowerCase().replace(/[^0-9]+/g," ").trim().split(/\s+/).sort((a,b)=>a-b).join(",");
+const normSeq = s => s.toLowerCase().replace(/ё/g,"е").replace(/[^а-я]+/g," ").trim().split(/\s+/).join(",");
+
+// Подмешиваем задачи из zadachi.js, если файл есть
+if(typeof EXTRA !== "undefined"){
+  TOPICS.forEach(t=>{
+    if(t.tasks && Array.isArray(EXTRA[t.id]) && EXTRA[t.id].length){
+      t.tasks = t.tasks.concat(EXTRA[t.id]);
+    }
+  });
+}
+if(typeof EXTRA_TOPICS !== "undefined" && EXTRA_TOPICS.length){
+  EXTRA_TOPICS.forEach(t=>TOPICS.push(t));
+}
+
+const STORE  = "trener-ai-progress";
+const ASTORE = "trener-ai-answers";
+const TSTORE = "trener-ai-tab";
+let solved = new Set();
+let answers = {};
+try{ solved = new Set(JSON.parse(localStorage.getItem(STORE) || "[]")); }catch(e){}
+try{ answers = JSON.parse(localStorage.getItem(ASTORE) || "{}") || {}; }catch(e){}
+const save = ()=>{ try{ localStorage.setItem(STORE, JSON.stringify([...solved])); }catch(e){} };
+const saveAnswers = ()=>{ try{ localStorage.setItem(ASTORE, JSON.stringify(answers)); }catch(e){} };
+
+const total = TOPICS.reduce((n,t)=>n+(t.tasks ? t.tasks.length : 0),0);
+document.getElementById("total").textContent = total;
+document.getElementById("score").textContent = solved.size;
+document.getElementById("reset").onclick = ()=>{
+  if(!confirm("Стереть все ответы и отметки о решённых задачах?")) return;
+  solved.clear(); save();
+  answers = {}; saveAnswers();
+  document.getElementById("score").textContent = 0;
+  render();
+};
+
+const nav = document.getElementById("nav");
+const content = document.getElementById("content");
+let active = 0;
+
+const KEYTABS = [
+  {id:"key",  tab:"Разбор: пригласительный", list:KEY,
+   lead:"Ответы и разборы варианта пригласительного этапа для 4–5 классов. Открывайте после того, как дочь попробует решить сама."},
+  {id:"key2", tab:"Разбор: школьный этап", list:KEY2,
+   lead:"Ответы и разборы школьного этапа 2025/26 для 5–6 классов: семь заданий по 12 баллов, всего 84. Каждое задание — только числовой ответ, решение сдавать не нужно."}
+];
+
+TOPICS.concat(KEYTABS).forEach((t,i)=>{
+  const b = document.createElement("button");
+  b.textContent = t.tab;
+  b.setAttribute("role","tab");
+  b.onclick = ()=>{ active=i; try{ localStorage.setItem(TSTORE, String(i)); }catch(e){} render(); };
+  nav.appendChild(b);
+});
+
+try{
+  const saved = parseInt(localStorage.getItem(TSTORE), 10);
+  if(saved >= 0 && saved < TOPICS.length + KEYTABS.length) active = saved;
+}catch(e){}
+
+function render(){
+  [...nav.children].forEach((b,i)=>b.setAttribute("aria-selected", i===active));
+  content.innerHTML = "";
+  if(active >= TOPICS.length){ renderKey(KEYTABS[active - TOPICS.length]); return; }
+  const topic = TOPICS[active];
+  if(topic.intro){
+    const box = document.createElement("div");
+    box.innerHTML = topic.intro;
+    content.appendChild(box);
+    return;
+  }
+  const lead = document.createElement("p");
+  lead.className = "topic-lead";
+  lead.innerHTML = topic.lead;
+  content.appendChild(lead);
+
+  topic.tasks.forEach((task,idx)=>{
+    const key = topic.id + idx;
+    const card = document.createElement("div");
+    card.className = "task" + (solved.has(key) ? " solved" : "");
+    card.innerHTML = `
+      <div class="tnum">Задача ${idx+1}</div>
+      <p class="q">${task.q}</p>
+      <div class="row">
+        <input type="text" placeholder="Ответ" aria-label="Ответ на задачу ${idx+1}">
+        <button class="btn btn-main">Проверить</button>
+        <button class="btn btn-ghost">Подсказка</button>
+        <button class="btn btn-ghost">Решение</button>
+      </div>
+      <div class="verdict hidden"></div>
+      <div class="panel hint hidden">${task.hint}</div>
+      <div class="panel sol hidden">${task.sol}${task.fig ? FIGS[task.fig] : ""}</div>`;
+
+    const [input] = card.getElementsByTagName("input");
+    if(answers[key] !== undefined) input.value = answers[key];
+    const [check, hintBtn, solBtn] = card.getElementsByClassName("btn");
+    const verdict = card.querySelector(".verdict");
+    const hint = card.querySelector(".hint");
+    const sol = card.querySelector(".sol");
+
+    const doCheck = ()=>{
+      const v = input.value;
+      if(!v.trim()){ return; }
+      let right;
+      if(task.set) right = task.ans.some(a=>normSet(a)===normSet(v));
+      else if(task.seq) right = task.ans.some(a=>normSeq(a)===normSeq(v));
+      else if(task.free) right = task.ans.some(a=>norm(v).includes(norm(a)));
+      else right = task.ans.some(a=>norm(a)===norm(v));
+      verdict.className = "verdict " + (right ? "ok" : "no");
+      verdict.textContent = right ? "Верно." : "Пока нет. Посмотрите подсказку и попробуйте ещё раз.";
+      if(right){ solved.add(key); card.classList.add("solved"); save(); }
+      document.getElementById("score").textContent = solved.size;
+    };
+    if(solved.has(key) && input.value.trim()){
+      verdict.className = "verdict ok";
+      verdict.textContent = "Верно.";
+    }
+    check.onclick = doCheck;
+    input.oninput = ()=>{ answers[key] = input.value; saveAnswers(); };
+    input.onkeydown = e => { if(e.key === "Enter") doCheck(); };
+    hintBtn.onclick = ()=>{ hint.classList.toggle("hidden"); hintBtn.textContent = hint.classList.contains("hidden") ? "Подсказка" : "Скрыть подсказку"; };
+    solBtn.onclick = ()=>{ sol.classList.toggle("hidden"); solBtn.textContent = sol.classList.contains("hidden") ? "Решение" : "Скрыть решение"; };
+
+    content.appendChild(card);
+  });
+}
+
+function renderKey(tab){
+  const lead = document.createElement("p");
+  lead.className = "topic-lead";
+  lead.innerHTML = tab.lead;
+  content.appendChild(lead);
+  tab.list.forEach(k=>{
+    const d = document.createElement("div");
+    d.className = "key";
+    d.innerHTML = `<h3>${k.t}</h3><div class="a">${k.a}</div><p>${k.s}</p>` + (k.fig ? FIGS[k.fig] : "") + (k.note ? `<p class="note">${k.note}</p>` : "");
+    content.appendChild(d);
+  });
+}
+
+render();
+
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "Тренажёр ВсОШ, профиль «Искусственный интеллект»",
+  "short_name": "Тренажёр ИИ",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#E7EDF4",
+  "theme_color": "#16253C",
+  "lang": "ru",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
