@@ -94,6 +94,23 @@
     background:#FBFCFE;color:var(--ink);resize:vertical;
   }
   .copied{font-size:14px;color:var(--ok);align-self:center}
+  .hrow{display:flex;align-items:baseline;gap:12px;padding:8px 0 2px;border-top:1px solid #EDF1F7}
+  .hrow:first-of-type{border-top:none}
+  .hname{flex:1 1 auto;font-size:15px;min-width:0}
+  .hsub{display:block;font-size:13px;color:var(--muted)}
+  .hnum{flex:0 0 auto;font-size:14px;color:var(--muted)}
+  .hnum.bad{color:var(--no)}
+  .hwrong{font-size:14px;color:var(--muted);padding:0 0 8px}
+  .sync{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:13px;color:var(--muted);align-self:center;
+    padding-left:4px;
+  }
+  .sync::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted)}
+  .sync.on{color:var(--ok)}
+  .sync.on::before{background:var(--ok)}
+  .sync.error{color:var(--no)}
+  .sync.error::before{background:var(--no)}
   @media (max-width:420px){ .rbar{display:none} }
   nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
   nav button{
@@ -228,6 +245,7 @@
     <div class="row" style="margin-top:18px">
       <div class="score" style="margin-top:0">Решено: <b id="score">0</b> из <span id="total">0</span></div>
       <button class="btn btn-ghost" id="report">Итоги</button>
+      <span class="sync local" id="sync">только на планшете</span>
       <button class="btn btn-ghost" id="reset">Начать заново</button>
     </div>
   </div>
@@ -2099,8 +2117,102 @@ let solved = new Set();
 let answers = {};
 try{ solved = new Set(JSON.parse(localStorage.getItem(STORE) || "[]")); }catch(e){}
 try{ answers = JSON.parse(localStorage.getItem(ASTORE) || "{}") || {}; }catch(e){}
-const save = ()=>{ try{ localStorage.setItem(STORE, JSON.stringify([...solved])); }catch(e){} };
-const saveAnswers = ()=>{ try{ localStorage.setItem(ASTORE, JSON.stringify(answers)); }catch(e){} };
+const KSTORE = "trener-ai-stats";
+let stats = {};
+try{ stats = JSON.parse(localStorage.getItem(KSTORE) || "{}") || {}; }catch(e){}
+const saveStats = ()=>{ try{ localStorage.setItem(KSTORE, JSON.stringify(stats)); }catch(e){} };
+
+const save = ()=>{ try{ localStorage.setItem(STORE, JSON.stringify([...solved])); }catch(e){} syncSoon(); };
+const saveAnswers = ()=>{ try{ localStorage.setItem(ASTORE, JSON.stringify(answers)); }catch(e){} syncSoon(); };
+
+/* ----------------------------------------------------------------------
+   Синхронизация с общей базой.
+   Если база недоступна (обычная веб-страница, офлайн, нет доступа),
+   claude.use("db") вернёт null и приложение работает как раньше —
+   целиком на планшете. Ничего не ломается, просто нет синхронизации.
+   ---------------------------------------------------------------------- */
+let db = null;
+let dbState = "local";          // local | connecting | on | error
+const DOC = "progress/state";
+let syncTimer = null;
+
+function noteAttempt(key, value, right){
+  const st = stats[key] || (stats[key] = {tries:0, wrong:[]});
+  st.tries++;
+  st.last = value;
+  if(right){
+    if(!st.solvedAt) st.solvedAt = new Date().toISOString();
+  } else if(value && st.wrong.indexOf(value) === -1 && st.wrong.length < 12){
+    st.wrong.push(value);
+  }
+  saveStats();
+  syncSoon();
+}
+
+function payload(){
+  return {
+    solved: [...solved],
+    answers: answers,
+    stats: stats,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function syncSoon(){
+  if(!db) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(()=>{
+    db.doc(DOC).set(payload()).then(
+      ()=>{ setSync("on"); },
+      ()=>{ setSync("error"); }
+    );
+  }, 1200);
+}
+
+function setSync(st){
+  dbState = st;
+  const el = document.getElementById("sync");
+  if(!el) return;
+  const text = {
+    local:"только на планшете",
+    connecting:"подключаюсь…",
+    on:"сохраняется в базу",
+    error:"база недоступна"
+  }[st];
+  el.textContent = text;
+  el.className = "sync " + st;
+  if(typeof active !== "undefined" && active === REPORT) render();
+}
+
+function mergeRemote(d){
+  if(!d) return;
+  if(Array.isArray(d.solved)) d.solved.forEach(k=>solved.add(k));
+  if(d.answers) Object.keys(d.answers).forEach(k=>{ if(answers[k] === undefined) answers[k] = d.answers[k]; });
+  if(d.stats) Object.keys(d.stats).forEach(k=>{
+    const r = d.stats[k], l = stats[k];
+    if(!l){ stats[k] = r; return; }
+    l.tries = Math.max(l.tries || 0, r.tries || 0);
+    l.solvedAt = l.solvedAt || r.solvedAt;
+    (r.wrong || []).forEach(w=>{ if(l.wrong.indexOf(w) === -1 && l.wrong.length < 12) l.wrong.push(w); });
+  });
+  save(); saveAnswers(); saveStats();
+}
+
+function connectDb(){
+  if(typeof window.claude === "undefined" || !window.claude || typeof window.claude.use !== "function") return;
+  setSync("connecting");
+  window.claude.use("db").then(handle=>{
+    if(!handle){ setSync("local"); return; }
+    db = handle;
+    return db.doc(DOC).get().then(snap=>{
+      if(snap && snap.exists) mergeRemote(snap.data());
+      setSync("on");
+      updateScore();
+      render();
+      syncSoon();
+    });
+  }).catch(()=>setSync("error"));
+}
 
 document.getElementById("report").onclick = ()=>{
   active = REPORT;
@@ -2111,6 +2223,8 @@ document.getElementById("reset").onclick = ()=>{
   if(!confirm("Стереть все ответы и отметки о решённых задачах — по обоим предметам?")) return;
   solved.clear(); save();
   answers = {}; saveAnswers();
+  stats = {}; saveStats();
+  if(db) db.doc(DOC).set(payload()).then(()=>{}, ()=>{});
   updateScore();
   render();
 };
@@ -2267,6 +2381,7 @@ function render(){
       verdict.className = "verdict " + (right ? "ok" : "no");
       verdict.textContent = right ? "Верно." : "Пока нет. Посмотрите подсказку и попробуйте ещё раз.";
       if(right){ solved.add(key); card.classList.add("solved"); save(); }
+      noteAttempt(key, v, right);
       updateScore();
     };
     if(solved.has(key) && input.value.trim()){
@@ -2302,6 +2417,27 @@ function reportRows(){
   });
 }
 
+function hardTasks(){
+  const out = [];
+  SUBJECTS.forEach((sub,si)=>sub.topics.forEach(t=>(t.tasks||[]).forEach((task,i)=>{
+    const st = stats[keyIn(si,t.id,i)];
+    if(!st) return;
+    const tries = st.tries || 0;
+    const wrong = st.wrong || [];
+    if(tries >= 3 || (wrong.length && !st.solvedAt)){
+      out.push({
+        subject: sub.name,
+        topic: t.tab,
+        num: i + 1,
+        tries,
+        wrong,
+        done: !!st.solvedAt
+      });
+    }
+  })));
+  return out.sort((a,b)=>(b.tries - a.tries) || (a.done - b.done));
+}
+
 function reportText(){
   const d = new Date();
   const dd = String(d.getDate()).padStart(2,"0") + "." + String(d.getMonth()+1).padStart(2,"0") + "." + d.getFullYear();
@@ -2311,6 +2447,16 @@ function reportText(){
     sub.rows.forEach(r=>lines.push("  " + r.name + " — " + r.done + " из " + r.total));
     lines.push("");
   });
+  const hard = hardTasks();
+  if(hard.length){
+    lines.push("Где было трудно:");
+    hard.slice(0,20).forEach(h=>{
+      lines.push("  " + h.subject + " / " + h.topic + ", задача " + h.num +
+        " — попыток " + h.tries + (h.done ? "" : ", не решена") +
+        (h.wrong.length ? "; отвечала: " + h.wrong.join(", ") : ""));
+    });
+    lines.push("");
+  }
   return lines.join("\n").trim();
 }
 
@@ -2336,10 +2482,28 @@ function renderReport(){
     content.appendChild(box);
   });
 
+  const hard = hardTasks();
+  if(hard.length){
+    const hbox = document.createElement("div");
+    hbox.className = "key";
+    hbox.innerHTML = `<h3>Где было трудно</h3>` +
+      `<p class="note" style="margin:0 0 10px">Задачи, на которые ушло три попытки и больше, либо оставшиеся нерешёнными. Это и есть темы, которые стоит пройти ещё раз.</p>` +
+      hard.slice(0,20).map(h=>
+        `<div class="hrow"><span class="hname">${h.topic}, задача ${h.num}` +
+        `<span class="hsub">${h.subject}</span></span>` +
+        `<span class="hnum${h.done ? "" : " bad"}">${h.tries} ${h.tries === 1 ? "попытка" : (h.tries < 5 ? "попытки" : "попыток")}${h.done ? "" : ", не решена"}</span></div>` +
+        (h.wrong.length ? `<div class="hwrong">отвечала: ${h.wrong.join(", ")}</div>` : "")
+      ).join("");
+    content.appendChild(hbox);
+  }
+
   const tools = document.createElement("div");
   tools.className = "key";
   tools.innerHTML =
     `<h3>Переслать отчёт</h3>` +
+    `<p class="note" style="margin:0 0 10px">${dbState === "on"
+      ? "Ответы сохраняются в базу — прогресс виден и без пересылки."
+      : "Прогресс хранится только на этом планшете. Чтобы показать его, скопируйте отчёт и вставьте в сообщение."}</p>` +
     `<textarea class="rtext" readonly rows="10"></textarea>` +
     `<div class="row" style="margin-top:12px"><button class="btn btn-main" id="copyrep">Скопировать отчёт</button>` +
     `<span class="copied hidden">Скопировано</span></div>`;
@@ -2383,6 +2547,7 @@ function renderKey(tab){
 
 buildNav();
 render();
+connectDb();
 
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
